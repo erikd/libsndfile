@@ -53,6 +53,7 @@ main (void)
 	test_double_convert () ;
 
 	test_log_printf () ;
+	test_log_printf2 () ;
 	test_binheader_writef () ;
 	test_file_io () ;
 

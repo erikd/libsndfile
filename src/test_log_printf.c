@@ -63,6 +63,41 @@
 		err += compare_strings_or_die (line, fmt, buffer, psf->parselog.buf) ;			\
 		}
 
+#define	CMP_0_ARGS2(line, err, fmt)	\
+	{	psf->parselog.indx = 0 ;			\
+		snprintf (buffer, sizeof (buffer), (fmt)) ;	\
+		psf_log_printf2 (psf, (fmt)) ;				\
+		err += compare_strings_or_die (line, fmt, buffer, psf->parselog.buf) ;	\
+		}
+
+#define	CMP_2_ARGS2(line, err, fmt, a)	\
+	{	psf->parselog.indx = 0 ;				\
+		snprintf (buffer, sizeof (buffer), (fmt), (a), (a)) ;	\
+		psf_log_printf2 (psf, (fmt), (a), (a)) ;					\
+		err += compare_strings_or_die (line, fmt, buffer, psf->parselog.buf) ;	\
+		}
+
+#define	CMP_4_ARGS2(line, err, fmt, a)	\
+	{	psf->parselog.indx = 0 ;				\
+		snprintf (buffer, sizeof (buffer), (fmt), (a), (a), (a), (a)) ;	\
+		psf_log_printf2 (psf, (fmt), (a), (a), (a), (a)) ;				\
+		err += compare_strings_or_die (line, fmt, buffer, psf->parselog.buf) ;	\
+		}
+
+#define	CMP_5_ARGS2(line, err, fmt, a)	\
+	{	psf->parselog.indx = 0 ;				\
+		snprintf (buffer, sizeof (buffer), (fmt), (a), (a), (a), (a), (a)) ;	\
+		psf_log_printf2 (psf, (fmt), (a), (a), (a), (a), (a)) ;					\
+		err += compare_strings_or_die (line, fmt, buffer, psf->parselog.buf) ;		\
+		}
+
+#define	CMP_6_ARGS2(line, err, fmt, a)	\
+	{	psf->parselog.indx = 0 ;				\
+		snprintf (buffer, sizeof (buffer), (fmt), (a), (a), (a), (a), (a), (a)) ;	\
+		psf_log_printf2 (psf, (fmt), (a), (a), (a), (a), (a), (a)) ;					\
+		err += compare_strings_or_die (line, fmt, buffer, psf->parselog.buf) ;			\
+		}
+
 static int
 compare_strings_or_die (int linenum, const char *fmt, const char* s1, const char* s2)
 {	int errors = 0 ;
@@ -123,3 +158,45 @@ test_log_printf (void)
 	puts ("ok") ;
 } /* test_log_printf */
 
+void
+test_log_printf2 (void)
+{	static char buffer [2048] ;
+	SF_PRIVATE	sf_private, *psf ;
+	int			k, errors = 0 ;
+	int			int_values [] = { 0, 1, 12, 123, 1234, 123456, -1, -12, -123, -1234, -123456 } ;
+
+	print_test_name ("Testing psf_log_printf2") ;
+
+	psf = &sf_private ;
+	memset (psf, 0, sizeof (sf_private)) ;
+
+	CMP_0_ARGS2 (__LINE__, errors, " ->%%<- ") ;
+
+	/* Test printing of ints. */
+	for (k = 0 ; k < ARRAY_LEN (int_values) ; k++)
+		CMP_6_ARGS2 (__LINE__, errors, "int A : %d, % d, %4d, % 4d, %04d, % 04d", int_values [k]) ;
+
+	for (k = 0 ; k < ARRAY_LEN (int_values) ; k++)
+		CMP_5_ARGS2 (__LINE__, errors, "int B : %+d, %+4d, %+04d, %-d, %-4d", int_values [k]) ;
+
+	for (k = 0 ; k < ARRAY_LEN (int_values) ; k++)
+		CMP_2_ARGS2 (__LINE__, errors, "int C : %- d, %- 4d", int_values [k]) ;
+
+	/* Test printing of unsigned ints. */
+	for (k = 0 ; k < ARRAY_LEN (int_values) ; k++)
+		CMP_4_ARGS2 (__LINE__, errors, "D : %u, %4u, %04u, %0u", int_values [k]) ;
+
+	/* Test printing of hex ints. */
+	for (k = 0 ; k < ARRAY_LEN (int_values) ; k++)
+		CMP_4_ARGS2 (__LINE__, errors, "E : %X, %4X, %04X, %0X", int_values [k]) ;
+
+	/* Test printing of strings. */
+	CMP_4_ARGS2 (__LINE__, errors, "B %s, %3s, %8s, %-8s", "str") ;
+
+	if (errors)
+	{	puts ("\nExiting due to errors.\n") ;
+		exit (1) ;
+		} ;
+
+	puts ("ok") ;
+} /* test_log_printf2 */

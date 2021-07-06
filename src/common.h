@@ -50,6 +50,14 @@
 #error "This code is not designed to be compiled with a C++ compiler."
 #endif
 
+#if SIZEOF_SF_COUNT_T == 4
+#	define PRISF_COUNT_T PRId32
+#elif SIZEOF_SF_COUNT_T == 8
+#	define PRISF_COUNT_T PRId64
+#else
+#	define PRISF_COUNT_T "d"
+#endif
+
 #ifdef INT64_C
 #	define	SF_PLATFORM_S64(x)		INT64_C (x)
 #elif (SIZEOF_LONG == 8)
@@ -82,6 +90,26 @@
 #	define WARN_UNUSED	__attribute__ ((warn_unused_result))
 #else
 #	define WARN_UNUSED
+#endif
+
+/* Annotations for printf-like functions. */
+
+#undef PSF_FORMAT_PRINTF_PARAM
+#if (defined _MSC_VER) && (_MSC_VER >= 1400)
+#	include <sal.h>
+#	if _MSC_VER > 1400
+#		define PSF_FORMAT_PRINTF_PARAM(p) _Printf_format_string_ p
+#	else
+# 		define PSF_FORMAT_PRINTF_PARAM(p) __format_string p
+#	endif
+#else
+#	define PSF_FORMAT_PRINTF_PARAM(p) p
+#endif
+
+#ifdef __GNUC__
+#	define PSF_FORMAT_PRINTF_FUNC_ATTR(format_index, first_to_check)  __attribute__ ((format (printf, format_index, first_to_check)))
+#else
+#	define PSF_FORMAT_PRINTF_FUNC_ATTR(format_index, first_to_check)
 #endif
 
 #define	SF_BUFFER_LEN			(8192)
@@ -774,7 +802,11 @@ void	double64_le_write	(double in, unsigned char *out) ;
 
 /* Functions for writing to the internal logging buffer. */
 
+/* Deprecated, use psf_log_printf2 instead */
 void	psf_log_printf		(SF_PRIVATE *psf, const char *format, ...) ;
+const char *psf_marker2str	(int marker) ;
+void	psf_log_printf2		(SF_PRIVATE *psf, PSF_FORMAT_PRINTF_PARAM (const char *format), ...)
+							PSF_FORMAT_PRINTF_FUNC_ATTR (2, 3) ;
 void	psf_log_SF_INFO 	(SF_PRIVATE *psf) ;
 
 int32_t	psf_rand_int32 (void) ;

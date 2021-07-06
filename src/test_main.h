@@ -27,6 +27,7 @@ print_test_name (const char * name)
 void test_conversions (void) ;
 void test_endswap (void) ;
 void test_log_printf (void) ;
+void test_log_printf2 (void) ;
 void test_binheader_writef (void) ;
 void test_file_io (void) ;
 
