@@ -55,6 +55,7 @@
 #define OggS_MARKER		MAKE_MARKER ('O', 'g', 'g', 'S')
 #define wvpk_MARKER		MAKE_MARKER ('w', 'v', 'p', 'k')
 #define LIST_MARKER		MAKE_MARKER ('L', 'I', 'S', 'T')
+#define iXML_MARKER		MAKE_MARKER ('i', 'X', 'M', 'L')
 
 /*
 ** The file size limit in bytes below which we can, if requested, write this
@@ -339,6 +340,7 @@ rf64_read_header (SF_PRIVATE *psf, int *blockalign, int *framesperblock)
 					} ;
 				break ;
 
+			case iXML_MARKER :
 			case JUNK_MARKER :
 			case PAD_MARKER :
 				psf_log_printf (psf, "%M : %d\n", marker, chunk_size) ;
