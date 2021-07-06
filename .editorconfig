@@ -11,6 +11,6 @@ tab_width = 4
 indent_style = space
 indent_size = 4
 
-[*.yml]
+[*.{yml,json}]
 indent_style = space
 indent_size = 2

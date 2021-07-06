@@ -1,0 +1,40 @@
+{
+  "name": "libsndfile",
+  "version-string": "1.0.31",
+  "description": "Library to read, write and manipulate many soundfile types. Authored by Eric de Castro Lopo",
+  "homepage": "https://github.com/erikd/libsndfile",
+  "license": "LGPL-2.1",
+  "default-features": [
+    "external-libs",
+    "mpeg"
+  ],
+  "features": {
+    "external-libs": {
+      "description": "Default feature. Enables Ogg Vorbis, FLAC and Ogg Opus formats support.",
+      "dependencies": [
+        "libflac",
+        "libvorbis",
+        "opus"
+      ]
+    },
+    "mpeg": {
+      "description": "Default feature. Enables MPEG support.",
+      "dependencies": [
+        "mpg123",
+        "mp3lame"
+      ]
+    },
+    "experimental": {
+      "description": "Enables experimental code.",
+      "dependencies": [
+        "speex"
+      ]
+    },
+    "regtest": {
+      "description": "Enables internal sndfile-regtest utility build target.",
+      "dependencies": [
+        "sqlite3"
+      ]
+    }
+  }
+}
