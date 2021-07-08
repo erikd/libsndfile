@@ -55,6 +55,8 @@
 #define OggS_MARKER		MAKE_MARKER ('O', 'g', 'g', 'S')
 #define wvpk_MARKER		MAKE_MARKER ('w', 'v', 'p', 'k')
 #define LIST_MARKER		MAKE_MARKER ('L', 'I', 'S', 'T')
+#define cue_MARKER		MAKE_MARKER ('c', 'u', 'e', ' ')
+#define iXML_MARKER		MAKE_MARKER ('i', 'X', 'M', 'L')
 
 /*
 ** The file size limit in bytes below which we can, if requested, write this
@@ -293,6 +295,61 @@ rf64_read_header (SF_PRIVATE *psf, int *blockalign, int *framesperblock)
 					if ((error = wavlike_read_peak_chunk (psf, chunk_size)) != 0)
 						return error ;
 					psf->peak_info->peak_loc = ((parsestage & HAVE_data) == 0) ? SF_PEAK_START : SF_PEAK_END ;
+					break ;
+
+			case cue_MARKER :
+					parsestage |= HAVE_other ;
+
+					{	uint32_t thisread, bytesread, cue_count, position, offset ;
+						int id, chunk_id, chunk_start, block_start, cue_index ;
+
+						bytesread = psf_binheader_readf (psf, "4", &cue_count) ;
+						psf_log_printf (psf, "%M : %u\n", marker, chunk_size) ;
+
+						if (cue_count > 2500) /* 2500 is close to the largest number of cues possible because of block sizes */
+						{	psf_log_printf (psf, "  Count : %u (skipping)\n", cue_count) ;
+							psf_binheader_readf (psf, "j", chunk_size - bytesread) ;
+							break ;
+							} ;
+
+						psf_log_printf (psf, "  Count : %d\n", cue_count) ;
+
+						if ((psf->cues = psf_cues_alloc (cue_count)) == NULL)
+							return SFE_MALLOC_FAILED ;
+
+						cue_index = 0 ;
+
+						while (cue_count)
+						{
+							if ((thisread = psf_binheader_readf (psf, "e44m444", &id, &position, &chunk_id, &chunk_start, &block_start, &offset)) == 0)
+								break ;
+							bytesread += thisread ;
+
+							if (cue_index < 10) /* avoid swamping log buffer with cues */
+								psf_log_printf (psf,	"   Cue ID : %2d"
+											"  Pos : %5u  Chunk : %M"
+											"  Chk Start : %d  Blk Start : %d"
+											"  Offset : %5d\n",
+										id, position, chunk_id, chunk_start, block_start, offset) ;
+							else if (cue_index == 10)
+								psf_log_printf (psf,	"   (Skipping)\n") ;
+
+							psf->cues->cue_points [cue_index].indx = id ;
+							psf->cues->cue_points [cue_index].position = position ;
+							psf->cues->cue_points [cue_index].fcc_chunk = chunk_id ;
+							psf->cues->cue_points [cue_index].chunk_start = chunk_start ;
+							psf->cues->cue_points [cue_index].block_start = block_start ;
+							psf->cues->cue_points [cue_index].sample_offset = offset ;
+							psf->cues->cue_points [cue_index].name [0] = '\0' ;
+							cue_count -- ;
+							cue_index ++ ;
+							} ;
+
+						if (bytesread != chunk_size)
+						{	psf_log_printf (psf, "**** Chunk size weirdness (%d != %d)\n", chunk_size, bytesread) ;
+							psf_binheader_readf (psf, "j", chunk_size - bytesread) ;
+							} ;
+						} ;
 					break ;
 
 			case data_MARKER :
@@ -701,6 +758,17 @@ rf64_write_header (SF_PRIVATE *psf, int calc_length)
 
 	if (psf->cart_16k != NULL)
 		wavlike_write_cart_chunk (psf) ;
+
+	if (psf->cues != NULL)
+	{	uint32_t k ;
+
+		psf_binheader_writef (psf, "em44", BHWm (cue_MARKER), BHW4 (4 + psf->cues->cue_count * 6 * 4), BHW4 (psf->cues->cue_count)) ;
+
+		for (k = 0 ; k < psf->cues->cue_count ; k++)
+			psf_binheader_writef (psf, "e44m444", BHW4 (psf->cues->cue_points [k].indx), BHW4 (psf->cues->cue_points [k].position),
+						BHWm (psf->cues->cue_points [k].fcc_chunk), BHW4 (psf->cues->cue_points [k].chunk_start),
+						BHW4 (psf->cues->cue_points [k].block_start), BHW4 (psf->cues->cue_points [k].sample_offset)) ;
+		} ;
 
 	/* The LIST/INFO chunk. */
 	if (psf->strings.flags & SF_STR_LOCATE_START)
