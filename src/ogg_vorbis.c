@@ -92,6 +92,12 @@ static int	vorbis_byterate (SF_PRIVATE *psf) ;
 static int	vorbis_calculate_granulepos (SF_PRIVATE *psf, uint64_t *gp_out) ;
 static int	vorbis_skip (SF_PRIVATE *psf, uint64_t target_gp) ;
 static int	vorbis_seek_trysearch (SF_PRIVATE *psf, uint64_t target_gp) ;
+
+static int	vorbis_sf2s_array (float **pcm, short *dest, int channels, int frames, float multiplier) ;
+static int	vorbis_sf2s_clip_array (float **pcm, short *dest, int channels, int frames, float multiplier) ;
+static int	vorbis_sf2i_array (float **pcm, int *dest, int channels, int frames, float multiplier) ;
+static int	vorbis_sf2i_clip_array (float **pcm, int *dest, int channels, int frames, float multiplier) ;
+
 static sf_count_t	vorbis_seek (SF_PRIVATE *psf, int mode, sf_count_t offset) ;
 static sf_count_t	vorbis_read_s (SF_PRIVATE *psf, short *ptr, sf_count_t len) ;
 static sf_count_t	vorbis_read_i (SF_PRIVATE *psf, int *ptr, sf_count_t len) ;
@@ -102,7 +108,7 @@ static sf_count_t	vorbis_write_i (SF_PRIVATE *psf, const int *ptr, sf_count_t le
 static sf_count_t	vorbis_write_f (SF_PRIVATE *psf, const float *ptr, sf_count_t len) ;
 static sf_count_t	vorbis_write_d (SF_PRIVATE *psf, const double *ptr, sf_count_t len) ;
 static sf_count_t	vorbis_read_sample (SF_PRIVATE *psf, void *ptr, sf_count_t lens, convert_func *transfn) ;
-static int	vorbis_rnull (SF_PRIVATE *psf, int samples, void *vptr, int off , int channels, float **pcm) ;
+static int			vorbis_rnull (SF_PRIVATE *psf, int samples, void *vptr, int off , int channels, float **pcm) ;
 
 typedef struct
 {	int id ;
@@ -506,6 +512,15 @@ ogg_vorbis_open (SF_PRIVATE *psf)
 	psf->sf.format = SF_FORMAT_OGG | SF_FORMAT_VORBIS ;
 	psf->sf.sections = 1 ;
 
+
+	/*
+	** Vorbis appears prone to increasing the amplitude of some signals. Encoded
+	** signals close to 0db may exceede 0db on decode. Set clipping on by
+	** default. The performance hit is trivial compared to the rest of the
+	** decoder.
+	*/
+	psf->add_clipping = SF_TRUE ;
+
 	return error ;
 } /* ogg_vorbis_open */
 
@@ -537,6 +552,80 @@ vorbis_command (SF_PRIVATE *psf, int command, void * data, int datasize)
 } /* vorbis_command */
 
 static int
+vorbis_sf2s_array (float **pcm, short *dest, int channels, int frames, float multiplier)
+{	int i, j, n = 0 ;
+
+	for (i = 0 ; i < frames ; i++)
+		for (j = 0 ; j < channels ; j++)
+			dest [n++] = psf_lrintf (pcm [j][i] * multiplier) ;
+	return n ;
+}
+
+static int
+vorbis_sf2s_clip_array (float **pcm, short *dest, int channels, int frames, float multiplier)
+{	int i, j, n = 0 ;
+	float scaled_value ;
+
+	for (i = 0 ; i < frames ; i++)
+	{	for (j = 0 ; j < channels ; j++)
+		{	scaled_value = (pcm [j][i] * multiplier) ;
+#if CPU_CLIPS_POSITIVE == 0
+			if (scaled_value >= (1.0 * 0x7FFF))
+			{	dest [n++] = 0x7FFF ;
+				continue ;
+				} ;
+#endif
+#if CPU_CLIPS_NEGATIVE == 0
+			if (scaled_value <= (-8.0 * 0x1000))
+			{	dest [n++] = -0x8000 ;
+				continue ;
+				} ;
+#endif
+
+			dest [n++] = psf_lrintf (scaled_value) ;
+			} ;
+		} ;
+	return n ;
+}
+
+static int
+vorbis_sf2i_array (float **pcm, int *dest, int channels, int frames, float multiplier)
+{	int i, j, n = 0 ;
+
+	for (i = 0 ; i < frames ; i++)
+		for (j = 0 ; j < channels ; j++)
+			dest [n++] = psf_lrintf (pcm [j][i] * multiplier) ;
+	return n ;
+}
+
+static int
+vorbis_sf2i_clip_array (float **pcm, int *dest, int channels, int frames, float multiplier)
+{	int i, j, n = 0 ;
+	float scaled_value ;
+
+	for (i = 0 ; i < frames ; i++)
+	{	for (j = 0 ; j < channels ; j++)
+		{	scaled_value = (pcm [j][i] * multiplier) ;
+#if CPU_CLIPS_POSITIVE == 0
+			if (scaled_value >= (1.0 * 0x7FFFFFFF))
+			{	dest [n++] = 0x7FFFFFFF ;
+				continue ;
+				} ;
+#endif
+#if CPU_CLIPS_NEGATIVE == 0
+			if (scaled_value <= (-8.0 * 0x10000000))
+			{	dest [n++] = -0x80000000 ;
+				continue ;
+				} ;
+#endif
+
+			dest [n++] = psf_lrintf (scaled_value) ;
+			} ;
+		} ;
+	return n ;
+}
+
+static int
 vorbis_rnull (SF_PRIVATE *UNUSED (psf), int samples, void *UNUSED (vptr), int UNUSED (off) , int channels, float **UNUSED (pcm))
 {
 	return samples * channels ;
@@ -544,46 +633,31 @@ vorbis_rnull (SF_PRIVATE *UNUSED (psf), int samples, void *UNUSED (vptr), int UN
 
 static int
 vorbis_rshort (SF_PRIVATE *psf, int samples, void *vptr, int off, int channels, float **pcm)
-{
-	short *ptr = (short*) vptr + off ;
-	int i = 0, j, n ;
+{	float multiplier ;
+
+	multiplier = (1.0 * 0x7FFF) ;
 	if (psf->float_int_mult)
-	{
-		float inverse = 1.0 / psf->float_max ;
-		for (j = 0 ; j < samples ; j++)
-			for (n = 0 ; n < channels ; n++)
-				ptr [i++] = psf_lrintf ((pcm [n][j] * inverse) * 32767.0f) ;
-	}
+		multiplier *= 1.0 / psf->float_max ;
+
+	if (psf->add_clipping)
+		return vorbis_sf2s_clip_array (pcm, (short *) vptr + off, channels, samples, multiplier) ;
 	else
-	{
-		for (j = 0 ; j < samples ; j++)
-			for (n = 0 ; n < channels ; n++)
-				ptr [i++] = psf_lrintf (pcm [n][j] * 32767.0f) ;
-	}
-	return i ;
+		return vorbis_sf2s_array (pcm, (short *) vptr + off, channels, samples, multiplier) ;
 } /* vorbis_rshort */
 
 static int
 vorbis_rint (SF_PRIVATE *psf, int samples, void *vptr, int off, int channels, float **pcm)
-{
-	int *ptr = (int*) vptr + off ;
-	int i = 0, j, n ;
+{	float multiplier ;
 
+	multiplier = (1.0 * 0x7FFFFFFF) ;
 	if (psf->float_int_mult)
-	{
-		float inverse = 1.0 / psf->float_max ;
-		for (j = 0 ; j < samples ; j++)
-			for (n = 0 ; n < channels ; n++)
-				ptr [i++] = psf_lrintf ((pcm [n][j] * inverse) * 2147483647.0f) ;
-	}
+		multiplier *= 1.0 / psf->float_max ;
+
+	if (psf->add_clipping)
+		return vorbis_sf2i_clip_array (pcm, (int *) vptr + off, channels, samples, multiplier) ;
 	else
-	{
-		for (j = 0 ; j < samples ; j++)
-			for (n = 0 ; n < channels ; n++)
-				ptr [i++] = psf_lrintf (pcm [n][j] * 2147483647.0f) ;
-	}
-	return i ;
-} /* vorbis_rint */
+		return vorbis_sf2i_array (pcm, (int *) vptr + off, channels, samples, multiplier) ;
+}
 
 static int
 vorbis_rfloat (SF_PRIVATE *UNUSED (psf), int samples, void *vptr, int off, int channels, float **pcm)

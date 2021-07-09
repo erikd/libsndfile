@@ -1069,17 +1069,17 @@ int sf_dither_double	(const SF_DITHER_INFO *dither, const double *in, double *ou
 ** Data conversion functions.
 */
 
-void psf_f2s_array (const float *src, short *dest, int count, int normalize) ;
-void psf_f2s_clip_array (const float *src, short *dest, int count, int normalize) ;
+void psf_f2s_array (const float *src, short *dest, int count, float factor) ;
+void psf_f2s_clip_array (const float *src, short *dest, int count, float factor) ;
 
-void psf_d2s_array (const double *src, short *dest, int count, int normalize) ;
-void psf_d2s_clip_array (const double *src, short *dest, int count, int normalize) ;
+void psf_d2s_array (const double *src, short *dest, int count, double factor) ;
+void psf_d2s_clip_array (const double *src, short *dest, int count, double factor) ;
 
-void psf_f2i_array (const float *src, int *dest, int count, int normalize) ;
-void psf_f2i_clip_array (const float *src, int *dest, int count, int normalize) ;
+void psf_f2i_array (const float *src, int *dest, int count, float factor) ;
+void psf_f2i_clip_array (const float *src, int *dest, int count, float factor) ;
 
-void psf_d2i_array (const double *src, int *dest, int count, int normalize) ;
-void psf_d2i_clip_array (const double *src, int *dest, int count, int normalize) ;
+void psf_d2i_array (const double *src, int *dest, int count, double factor) ;
+void psf_d2i_clip_array (const double *src, int *dest, int count, double factor) ;
 
 
 /*------------------------------------------------------------------------------------

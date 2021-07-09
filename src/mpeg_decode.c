@@ -110,7 +110,7 @@ static sf_count_t
 mpeg_dec_read_s (SF_PRIVATE *psf, short *ptr, sf_count_t len)
 {	BUF_UNION ubuf ;
 	sf_count_t total, readlen ;
-	void (*convert) (const float *, short *, int, int) ;
+	void (*convert) (const float *, short *, int, float) ;
 	const sf_count_t buflen = ARRAY_LEN (ubuf.fbuf) ;
 
 	convert = (psf->add_clipping) ? psf_f2s_clip_array : psf_f2s_array ;
@@ -119,7 +119,7 @@ mpeg_dec_read_s (SF_PRIVATE *psf, short *ptr, sf_count_t len)
 		if (readlen <= 0)
 			break ;
 
-		convert (ubuf.fbuf, ptr + total, readlen, SF_TRUE) ;
+		convert (ubuf.fbuf, ptr + total, readlen, 1.0f * 0x8000) ;
 		} ;
 
 	return total ;
@@ -129,7 +129,7 @@ static sf_count_t
 mpeg_dec_read_i (SF_PRIVATE *psf, int *ptr, sf_count_t len)
 {	BUF_UNION ubuf ;
 	sf_count_t total, readlen ;
-	void (*convert) (const float *, int *, int, int) ;
+	void (*convert) (const float *, int *, int, float) ;
 	const sf_count_t buflen = ARRAY_LEN (ubuf.fbuf) ;
 
 	convert = (psf->add_clipping) ? psf_f2i_clip_array : psf_f2i_array ;
@@ -138,7 +138,7 @@ mpeg_dec_read_i (SF_PRIVATE *psf, int *ptr, sf_count_t len)
 		if (readlen <= 0)
 			break ;
 
-		convert (ubuf.fbuf, ptr + total, readlen, SF_TRUE) ;
+		convert (ubuf.fbuf, ptr + total, readlen, 1.0f * 0x8000) ;
 		} ;
 
 	return total ;

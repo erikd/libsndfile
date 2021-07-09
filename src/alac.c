@@ -701,14 +701,16 @@ alac_write_i (SF_PRIVATE *psf, const int *ptr, sf_count_t len)
 static sf_count_t
 alac_write_f (SF_PRIVATE *psf, const float *ptr, sf_count_t len)
 {	ALAC_PRIVATE *plac ;
-	void		(*convert) (const float *, int *t, int, int) ;
+	void		(*convert) (const float *, int *t, int, float) ;
 	int			*iptr ;
 	int			writecount ;
 	sf_count_t	total = 0 ;
+	float		factor ;
 
 	if ((plac = (ALAC_PRIVATE*) psf->codec_data) == NULL)
 		return 0 ;
 
+	factor = (psf->norm_float) ? (8.0f * 0x10000000) : 1.0f ;
 	convert = (psf->add_clipping) ? psf_f2i_clip_array : psf_f2i_array ;
 
 	while (len > 0)
@@ -717,7 +719,7 @@ alac_write_f (SF_PRIVATE *psf, const float *ptr, sf_count_t len)
 
 		iptr = plac->buffer + plac->partial_block_frames * plac->channels ;
 
-		convert (ptr, iptr, writecount, psf->norm_float) ;
+		convert (ptr, iptr, writecount, factor) ;
 
 		plac->partial_block_frames += writecount / plac->channels ;
 		total += writecount ;
@@ -734,14 +736,16 @@ alac_write_f (SF_PRIVATE *psf, const float *ptr, sf_count_t len)
 static sf_count_t
 alac_write_d (SF_PRIVATE *psf, const double *ptr, sf_count_t len)
 {	ALAC_PRIVATE *plac ;
-	void		(*convert) (const double *, int *t, int, int) ;
+	void		(*convert) (const double *, int *t, int, double) ;
 	int			*iptr ;
 	int			writecount ;
 	sf_count_t	total = 0 ;
+	double		factor ;
 
 	if ((plac = (ALAC_PRIVATE*) psf->codec_data) == NULL)
 		return 0 ;
 
+	factor = (psf->norm_double) ? (8.0 * 0x10000000) : 1.0 ;
 	convert = (psf->add_clipping) ? psf_d2i_clip_array : psf_d2i_array ;
 
 	while (len > 0)
@@ -750,7 +754,7 @@ alac_write_d (SF_PRIVATE *psf, const double *ptr, sf_count_t len)
 
 		iptr = plac->buffer + plac->partial_block_frames * plac->channels ;
 
-		convert (ptr, iptr, writecount, psf->norm_float) ;
+		convert (ptr, iptr, writecount, factor) ;
 
 		plac->partial_block_frames += writecount / plac->channels ;
 		total += writecount ;

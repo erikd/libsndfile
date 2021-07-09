@@ -1655,156 +1655,116 @@ str_of_endianness (int end)
 */
 
 void
-psf_f2s_array (const float *src, short *dest, int count, int normalize)
-{	float 			normfact ;
-
-	normfact = normalize ? (1.0 * 0x7FFF) : 1.0 ;
-	for (int i = 0 ; i < count ; i++)
-		dest [i] = psf_lrintf (src [i] * normfact) ;
-
+psf_f2s_array (const float *src, short *dest, int count, float factor)
+{	for (int i = 0 ; i < count ; i++)
+		dest [i] = psf_lrintf (src [i] * factor) ;
 	return ;
 } /* psf_f2s_array */
 
 void
-psf_f2s_clip_array (const float *src, short *dest, int count, int normalize)
-{	float			normfact, scaled_value ;
-
-	normfact = normalize ? (1.0 * 0x8000) : 1.0 ;
+psf_f2s_clip_array (const float *src, short *dest, int count, float factor)
+{	float			scaled_value ;
 
 	for (int i = 0 ; i < count ; i++)
-	{	scaled_value = src [i] * normfact ;
-#if CPU_CLIPS_POSITIVE == 0
-		if (scaled_value >= (1.0 * 0x7FFF))
+	{	scaled_value = src [i] * factor ;
+		if (scaled_value >= (8.0f * 0x1000))
 		{	dest [i] = 0x7FFF ;
 			continue ;
 			} ;
-#endif
-#if CPU_CLIPS_NEGATIVE == 0
-		if (scaled_value <= (-8.0 * 0x1000))
-		{	dest [i] = -0x7FFF - 1 ;
+		if (scaled_value <= (-8.0f * 0x1000))
+		{	dest [i] = -0x8000 ;
 			continue ;
 			} ;
-#endif
 
 		dest [i] = psf_lrintf (scaled_value) ;
 		} ;
-
-	return ;
 } /* psf_f2s_clip_array */
 
 void
-psf_d2s_array (const double *src, short *dest, int count, int normalize)
-{	double 			normfact ;
-
-	normfact = normalize ? (1.0 * 0x7FFF) : 1.0 ;
+psf_d2s_array (const double *src, short *dest, int count, double factor)
+{
 	for (int i = 0 ; i < count ; i++)
-		dest [i] = psf_lrint (src [i] * normfact) ;
+		dest [i] = psf_lrint (src [i] * factor) ;
 
 	return ;
-} /* psf_f2s_array */
+} /* psf_d2s_array */
 
 void
-psf_d2s_clip_array (const double *src, short *dest, int count, int normalize)
-{	double			normfact, scaled_value ;
-
-	normfact = normalize ? (1.0 * 0x8000) : 1.0 ;
+psf_d2s_clip_array (const double *src, short *dest, int count, double factor)
+{	double			scaled_value ;
 
 	for (int i = 0 ; i < count ; i++)
-	{	scaled_value = src [i] * normfact ;
-#if CPU_CLIPS_POSITIVE == 0
-		if (scaled_value >= (1.0 * 0x7FFF))
+	{	scaled_value = src [i] * factor ;
+		if (scaled_value >= (8.0 * 0x1000))
 		{	dest [i] = 0x7FFF ;
 			continue ;
 			} ;
-#endif
-#if CPU_CLIPS_NEGATIVE == 0
 		if (scaled_value <= (-8.0 * 0x1000))
-		{	dest [i] = -0x7FFF - 1 ;
+		{	dest [count] = -0x8000 ;
 			continue ;
 			} ;
-#endif
 
 		dest [i] = psf_lrint (scaled_value) ;
 		} ;
-
-	return ;
 } /* psf_d2s_clip_array */
 
-
 void
-psf_f2i_array (const float *src, int *dest, int count, int normalize)
-{	float 			normfact ;
-
-	normfact = normalize ? (1.0 * 0x7FFFFFFF) : 1.0 ;
-	for (int i = 0 ; i < count ; i++)
-		dest [i] = psf_lrintf (src [i] * normfact) ;
-
+psf_f2i_array (const float *src, int *dest, int count, float factor)
+{	for (int i = 0 ; i < count ; i++)
+		dest [i] = psf_lrintf (src [i] * factor) ;
 	return ;
 } /* psf_f2i_array */
 
 void
-psf_f2i_clip_array (const float *src, int *dest, int count, int normalize)
-{	float			normfact, scaled_value ;
-
-	normfact = normalize ? (8.0 * 0x10000000) : 1.0 ;
+psf_f2i_clip_array (const float *src, int *dest, int count, float factor)
+{	float			scaled_value ;
 
 	for (int i = 0 ; i < count ; i++)
-	{	scaled_value = src [i] * normfact ;
+	{	scaled_value = src [i] * factor ;
 #if CPU_CLIPS_POSITIVE == 0
-		if (scaled_value >= (1.0 * 0x7FFFFFFF))
-		{	dest [i] = 0x7FFFFFFF ;
+		if (scaled_value >= (8.0f * 0x10000000))
+		{	dest [count] = 0x7FFFFFFF ;
 			continue ;
 			} ;
 #endif
 #if CPU_CLIPS_NEGATIVE == 0
-		if (scaled_value <= (-8.0 * 0x10000000))
-		{	dest [i] = 0x80000000 ;
+		if (scaled_value <= (-8.0f * 0x10000000))
+		{	dest [count] = -0x80000000 ;
 			continue ;
 			} ;
 #endif
-
 		dest [i] = psf_lrintf (scaled_value) ;
 		} ;
-
-	return ;
 } /* psf_f2i_clip_array */
 
 void
-psf_d2i_array (const double *src, int *dest, int count, int normalize)
-{	double 			normfact ;
-
-	normfact = normalize ? (1.0 * 0x7FFFFFFF) : 1.0 ;
-	for (int i = 0 ; i < count ; i++)
-		dest [i] = psf_lrint (src [i] * normfact) ;
+psf_d2i_array (const double *src, int *dest, int count, double factor)
+{	for (int i = 0 ; i < count ; i++)
+		dest [i] = psf_lrint (src [i] * factor) ;
 
 	return ;
 } /* psf_f2i_array */
 
 void
-psf_d2i_clip_array (const double *src, int *dest, int count, int normalize)
-{	double			normfact, scaled_value ;
-
-	normfact = normalize ? (8.0 * 0x10000000) : 1.0 ;
+psf_d2i_clip_array (const double *src, int *dest, int count, double factor)
+{	double			scaled_value ;
 
 	for (int i = 0 ; i < count ; i++)
-	{	scaled_value = src [i] * normfact ;
+	{	scaled_value = src [i] * factor ;
 #if CPU_CLIPS_POSITIVE == 0
-		if (scaled_value >= (1.0 * 0x7FFFFFFF))
-		{	dest [i] = 0x7FFFFFFF ;
+		if (scaled_value >= (8.0 * 0x10000000))
+		{	dest [count] = 0x7FFFFFFF ;
 			continue ;
 			} ;
 #endif
 #if CPU_CLIPS_NEGATIVE == 0
 		if (scaled_value <= (-8.0 * 0x10000000))
-		{	dest [i] = 0x80000000 ;
+		{	dest [count] = -0x80000000 ;
 			continue ;
 			} ;
 #endif
-
 		dest [i] = psf_lrint (scaled_value) ;
 		} ;
-
-	return ;
 } /* psf_d2i_clip_array */
 
 FILE *
